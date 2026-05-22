@@ -63,7 +63,6 @@ input:focus-visible {
 }
 
 .start-view,
-.auth-view,
 .current-card,
 .activity-form,
 .wheel-section {
@@ -73,30 +72,25 @@ input:focus-visible {
   box-shadow: 0 18px 52px rgba(20, 33, 30, 0.12);
 }
 
-.start-view,
-.auth-view {
+.start-view {
   display: grid;
   gap: 28px;
   padding: 28px;
 }
 
-.auth-form {
+.db-warning {
   display: grid;
   gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(185, 72, 72, 0.28);
+  border-radius: 8px;
+  background: rgba(185, 72, 72, 0.1);
 }
 
-.auth-actions {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.status-message {
-  min-height: 22px;
+.db-warning p {
   margin: 0;
-  color: #60736f;
-  font-weight: 750;
+  color: #8a2d2d;
+  font-weight: 800;
 }
 
 .summary {
@@ -173,11 +167,6 @@ h2 {
   border: 1px solid rgba(15, 118, 110, 0.22);
   background: rgba(255, 255, 255, 0.68);
   color: #0f766e;
-}
-
-.ghost.small {
-  justify-self: center;
-  min-height: 38px;
 }
 
 .day-view {
@@ -351,7 +340,6 @@ input {
   }
 
   .start-view,
-  .auth-view,
   .current-card,
   .activity-form,
   .wheel-section {
@@ -378,9 +366,17 @@ input {
 
   .progress-label,
   .current-label,
-  .status-message,
   label {
     color: #b6c8c3;
+  }
+
+  .db-warning {
+    border-color: rgba(252, 165, 165, 0.3);
+    background: rgba(185, 72, 72, 0.14);
+  }
+
+  .db-warning p {
+    color: #fca5a5;
   }
 
   .summary h3,

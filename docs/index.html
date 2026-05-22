@@ -14,27 +14,14 @@
   </head>
   <body>
     <main class="screen">
-      <section id="auth-view" class="auth-view" aria-labelledby="auth-title">
-        <p class="eyebrow">Supabase sync</p>
-        <h1 id="auth-title">Time App</h1>
-        <form id="auth-form" class="auth-form">
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" autocomplete="email" required>
-          <label for="password">Password</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required minlength="6">
-          <div class="auth-actions">
-            <button id="sign-in" type="submit" class="primary">Sign In</button>
-            <button id="sign-up" type="button" class="ghost">Create Account</button>
-          </div>
-        </form>
-        <p id="auth-message" class="status-message" aria-live="polite"></p>
-      </section>
-
       <section id="start-view" class="start-view" aria-labelledby="app-title">
         <p class="eyebrow" id="today-label">Tallinn day</p>
         <h1 id="app-title">Time App</h1>
         <button id="start-day" type="button" class="primary big">Start Day</button>
-        <button id="sign-out-start" type="button" class="ghost small">Sign Out</button>
+        <div id="db-warning-start" class="db-warning" hidden>
+          <p id="status-message-start" aria-live="polite"></p>
+          <button id="retry-sync-start" type="button" class="ghost">Retry Database</button>
+        </div>
         <section id="summary" class="summary" aria-labelledby="summary-title" hidden>
           <h2 id="summary-title">End day summary</h2>
           <p id="summary-stats"></p>
@@ -72,7 +59,10 @@
         <div class="end-day-row">
           <button id="end-day" type="button" class="ghost">End Day</button>
         </div>
-        <button id="sign-out-day" type="button" class="ghost small">Sign Out</button>
+        <div id="db-warning-day" class="db-warning" hidden>
+          <p id="status-message-day" aria-live="polite"></p>
+          <button id="retry-sync-day" type="button" class="ghost">Retry Database</button>
+        </div>
       </section>
     </main>
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "time-app-v5";
+const CACHE_NAME = "time-app-v6";
 const ASSETS = [
   "./",
   "./index.html",

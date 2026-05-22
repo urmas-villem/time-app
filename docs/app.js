@@ -5,12 +5,12 @@ const TALLINN_TIME_ZONE = "Europe/Tallinn";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const authView = document.querySelector("#auth-view");
-const authForm = document.querySelector("#auth-form");
-const email = document.querySelector("#email");
-const password = document.querySelector("#password");
-const signUp = document.querySelector("#sign-up");
-const authMessage = document.querySelector("#auth-message");
+const dbWarningStart = document.querySelector("#db-warning-start");
+const dbWarningDay = document.querySelector("#db-warning-day");
+const statusMessageStart = document.querySelector("#status-message-start");
+const statusMessageDay = document.querySelector("#status-message-day");
+const retrySyncStart = document.querySelector("#retry-sync-start");
+const retrySyncDay = document.querySelector("#retry-sync-day");
 const startView = document.querySelector("#start-view");
 const dayView = document.querySelector("#day-view");
 const todayLabel = document.querySelector("#today-label");
@@ -21,8 +21,6 @@ const summaryDone = document.querySelector("#summary-done");
 const summaryIncomplete = document.querySelector("#summary-incomplete");
 const startDay = document.querySelector("#start-day");
 const endDay = document.querySelector("#end-day");
-const signOutStart = document.querySelector("#sign-out-start");
-const signOutDay = document.querySelector("#sign-out-day");
 const progressLabel = document.querySelector("#progress-label");
 const currentActivity = document.querySelector("#current-activity");
 const done = document.querySelector("#done");
@@ -39,6 +37,8 @@ let state = {
   dayTasks: [],
   summary: null
 };
+let dbReady = false;
+let dbError = "";
 
 function getTallinnDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -81,12 +81,14 @@ function saveCache() {
 }
 
 function setMessage(message) {
-  authMessage.textContent = message;
+  dbError = message;
+  statusMessageStart.textContent = message;
+  statusMessageDay.textContent = message;
 }
 
 function requireUserId() {
   if (!session?.user?.id) {
-    throw new Error("Sign in required.");
+    throw new Error("Supabase session is still loading.");
   }
 
   return session.user.id;
@@ -115,24 +117,34 @@ function normalizeCurrentIndex() {
 }
 
 async function loadApp() {
-  setMessage("Loading...");
+  setMessage("");
 
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
   if (sessionError) {
-    setMessage(sessionError.message);
+    dbReady = false;
+    setMessage(`Database sync problem: ${sessionError.message}`);
+    render();
     return;
   }
 
   session = sessionData.session;
 
   if (!session) {
-    render();
-    setMessage("");
-    return;
+    const { data, error } = await supabase.auth.signInAnonymously();
+
+    if (error) {
+      dbReady = false;
+      setMessage(`Database sync problem: ${error.message}`);
+      render();
+      return;
+    }
+
+    session = data.session;
   }
 
   await loadData();
+  dbReady = true;
   render();
   setMessage("");
 }
@@ -410,11 +422,16 @@ async function removeTask(id) {
 }
 
 function render() {
-  const signedIn = Boolean(session);
+  const hasDatabase = Boolean(session) && dbReady;
   const readableDate = getReadableTallinnDate();
-  authView.hidden = signedIn;
-  startView.hidden = !signedIn || state.dayStarted;
-  dayView.hidden = !signedIn || !state.dayStarted;
+  startView.hidden = state.dayStarted;
+  dayView.hidden = !state.dayStarted;
+  startDay.disabled = !hasDatabase;
+  activityForm.querySelector("button").disabled = !hasDatabase;
+  done.disabled = !hasDatabase;
+  endDay.disabled = !hasDatabase;
+  dbWarningStart.hidden = !dbError;
+  dbWarningDay.hidden = !dbError;
   todayLabel.textContent = readableDate;
 
   renderSummary();
@@ -424,7 +441,7 @@ function render() {
   progressLabel.textContent = `Completed tasks today: ${completed} of ${state.dayTasks.length}`;
   currentCard.hidden = !current;
   currentActivity.textContent = current ? (current.completed_at ? "Day complete" : current.title_snapshot) : "";
-  done.disabled = !current || Boolean(current.completed_at);
+  done.disabled = !hasDatabase || !current || Boolean(current.completed_at);
 
   activityWheel.innerHTML = "";
 
@@ -509,54 +526,20 @@ async function handleAction(action) {
   try {
     setMessage("");
     await action();
+    dbReady = true;
     render();
   } catch (error) {
-    setMessage(error.message);
+    dbReady = false;
+    setMessage(`Database sync problem: ${error.message}`);
+    render();
   }
 }
-
-authForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  handleAction(async () => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.value.trim(),
-      password: password.value
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    session = data.session;
-    await loadData();
-  });
-});
-
-signUp.addEventListener("click", () => {
-  handleAction(async () => {
-    const { data, error } = await supabase.auth.signUp({
-      email: email.value.trim(),
-      password: password.value
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data.session) {
-      setMessage("Check your email to confirm the account, then sign in.");
-      return;
-    }
-
-    session = data.session;
-    await loadData();
-  });
-});
 
 startDay.addEventListener("click", () => handleAction(startToday));
 endDay.addEventListener("click", () => handleAction(endToday));
 done.addEventListener("click", () => handleAction(completeCurrentTask));
+retrySyncStart.addEventListener("click", () => loadApp());
+retrySyncDay.addEventListener("click", () => loadApp());
 
 activityForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -573,23 +556,6 @@ activityForm.addEventListener("submit", (event) => {
   });
 });
 
-async function signOut() {
-  await supabase.auth.signOut();
-  session = null;
-  state = {
-    activities: [],
-    currentIndex: 0,
-    day: null,
-    dayStarted: false,
-    dayTasks: [],
-    summary: null
-  };
-  render();
-}
-
-signOutStart.addEventListener("click", () => handleAction(signOut));
-signOutDay.addEventListener("click", () => handleAction(signOut));
-
 supabase.auth.onAuthStateChange((_event, nextSession) => {
   session = nextSession;
 });
@@ -599,6 +565,7 @@ if ("serviceWorker" in navigator) {
 }
 
 loadApp().catch((error) => {
-  setMessage(error.message);
+  dbReady = false;
+  setMessage(`Database sync problem: ${error.message}`);
   render();
 });
