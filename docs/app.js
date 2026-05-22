@@ -4,7 +4,7 @@ const TALLINN_TIME_ZONE = "Europe/Tallinn";
 const startView = document.querySelector("#start-view");
 const dayView = document.querySelector("#day-view");
 const todayLabel = document.querySelector("#today-label");
-const activeDate = document.querySelector("#active-date");
+const currentCard = document.querySelector("#current-card");
 const startDay = document.querySelector("#start-day");
 const endDay = document.querySelector("#end-day");
 const progressLabel = document.querySelector("#progress-label");
@@ -144,7 +144,6 @@ function removeActivity(id) {
 function render() {
   const readableDate = getReadableTallinnDate();
   todayLabel.textContent = readableDate;
-  activeDate.textContent = readableDate;
   startView.hidden = state.dayStarted;
   dayView.hidden = !state.dayStarted;
 
@@ -153,13 +152,9 @@ function render() {
   progressLabel.textContent = `${completed} / ${state.activities.length}`;
   activityCount.textContent = `${state.activities.length} ${state.activities.length === 1 ? "activity" : "activities"}`;
 
-  if (current) {
-    currentActivity.textContent = current.done ? "Day complete" : current.title;
-    done.disabled = current.done;
-  } else {
-    currentActivity.textContent = "Add your first activity";
-    done.disabled = true;
-  }
+  currentCard.hidden = !current;
+  currentActivity.textContent = current ? (current.done ? "Day complete" : current.title) : "";
+  done.disabled = !current || current.done;
 
   activityWheel.innerHTML = "";
 

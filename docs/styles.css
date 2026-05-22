@@ -9,6 +9,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   min-height: 100vh;
   margin: 0;
@@ -122,16 +126,11 @@ h2 {
   gap: 14px;
 }
 
-.topbar,
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-}
-
-.topbar h1 {
-  font-size: 2.25rem;
 }
 
 .current-card {
@@ -260,6 +259,16 @@ input {
 
 .mini.danger {
   color: #963333;
+}
+
+.end-day-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 0;
+}
+
+.end-day-row .ghost {
+  min-width: 148px;
 }
 
 @media (max-width: 390px) {
