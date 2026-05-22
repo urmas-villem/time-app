@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Time App</title>
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+  <circle cx="256" cy="256" r="154" fill="#f5faf8"/>
+  <path d="M256 126a130 130 0 1 0 0 260 130 130 0 0 0 0-260Zm0 28a102 102 0 1 1 0 204 102 102 0 0 1 0-204Z" fill="#0f766e"/>
+  <path d="M269 190v72l58 35" fill="none" stroke="#0f766e" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

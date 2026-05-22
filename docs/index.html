@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0f766e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Time App">
+    <title>Time App</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="screen">
+      <section class="timer" aria-labelledby="app-title">
+        <p class="eyebrow">Focus session</p>
+        <h1 id="app-title">Time App</h1>
+        <div class="clock" id="clock" aria-live="polite">25:00</div>
+        <div class="controls">
+          <button id="start-pause" type="button">Start</button>
+          <button id="reset" type="button" class="secondary">Reset</button>
+        </div>
+      </section>
+
+      <section class="tasks" aria-labelledby="tasks-title">
+        <div class="section-head">
+          <h2 id="tasks-title">Today</h2>
+          <span id="task-count">0 open</span>
+        </div>
+        <form id="task-form">
+          <label for="task-input">Task</label>
+          <div class="task-entry">
+            <input id="task-input" name="task" type="text" autocomplete="off" placeholder="Add one thing">
+            <button type="submit">Add</button>
+          </div>
+        </form>
+        <ul id="task-list" aria-label="Task list"></ul>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
