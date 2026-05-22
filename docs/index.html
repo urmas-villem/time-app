@@ -10,7 +10,7 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-    <link rel="stylesheet" href="./styles.css?v=shared-name-2">
+    <link rel="stylesheet" href="./styles.css?v=history-1">
   </head>
   <body>
     <main class="screen">
@@ -25,7 +25,6 @@
           </div>
         </form>
         <p id="sync-label" class="sync-label" hidden></p>
-        <button id="start-day" type="button" class="primary big">Start Day</button>
         <div id="db-warning-start" class="db-warning" hidden>
           <p id="status-message-start" aria-live="polite"></p>
           <button id="retry-sync-start" type="button" class="ghost">Retry Database</button>
@@ -40,6 +39,18 @@
           <div class="summary-block">
             <h3>Incomplete</h3>
             <ul id="summary-incomplete"></ul>
+          </div>
+        </section>
+        <button id="start-day" type="button" class="primary big">Start Day</button>
+        <section id="history" class="history" aria-labelledby="history-title" hidden>
+          <h2 id="history-title">History</h2>
+          <div class="chart-block">
+            <h3>Day completion</h3>
+            <div id="completion-chart" class="completion-chart"></div>
+          </div>
+          <div class="chart-block">
+            <h3>Task done times</h3>
+            <div id="task-time-chart" class="task-time-chart"></div>
           </div>
         </section>
       </section>
@@ -76,6 +87,6 @@
     </main>
 
     <script src="./supabase.js?v=02fb662"></script>
-    <script src="./app.js?v=shared-name-2"></script>
+    <script src="./app.js?v=history-1"></script>
   </body>
 </html>

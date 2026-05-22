@@ -19,11 +19,15 @@ const syncLabelDay = document.querySelector("#sync-label-day");
 const startView = document.querySelector("#start-view");
 const dayView = document.querySelector("#day-view");
 const todayLabel = document.querySelector("#today-label");
+const appTitle = document.querySelector("#app-title");
 const currentCard = document.querySelector("#current-card");
 const summary = document.querySelector("#summary");
 const summaryStats = document.querySelector("#summary-stats");
 const summaryDone = document.querySelector("#summary-done");
 const summaryIncomplete = document.querySelector("#summary-incomplete");
+const history = document.querySelector("#history");
+const completionChart = document.querySelector("#completion-chart");
+const taskTimeChart = document.querySelector("#task-time-chart");
 const startDay = document.querySelector("#start-day");
 const endDay = document.querySelector("#end-day");
 const progressLabel = document.querySelector("#progress-label");
@@ -40,6 +44,7 @@ let state = {
   day: null,
   dayStarted: false,
   dayTasks: [],
+  history: [],
   summary: null
 };
 let dbReady = false;
@@ -85,6 +90,26 @@ function saveCache() {
     date: getTallinnDate(),
     state
   }));
+}
+
+function getTallinnTimeMinutes(isoTime) {
+  if (!isoTime) {
+    return null;
+  }
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: TALLINN_TIME_ZONE
+  }).formatToParts(new Date(isoTime));
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return Number(values.hour) * 60 + Number(values.minute);
+}
+
+function getShortDayLabel(dayDate) {
+  const [, month, day] = dayDate.split("-");
+  return `${day}.${month}`;
 }
 
 function loadOwner() {
@@ -238,6 +263,7 @@ async function loadApp() {
   }
 
   if (!owner.hash) {
+    state.history = [];
     dbReady = true;
     render();
     setMessage("");
@@ -300,8 +326,44 @@ async function loadData() {
     }
   }
 
+  await loadHistory(ownerHash);
   normalizeCurrentIndex();
   saveCache();
+}
+
+async function loadHistory(ownerHash) {
+  const { data: days, error: daysError } = await withTimeout(supabaseClient.from("days")
+    .select("id,day_date,started_at,ended_at")
+    .eq("owner_key_hash", ownerHash)
+    .order("day_date", { ascending: false })
+    .limit(30), "Loading history days");
+
+  if (daysError) {
+    throw daysError;
+  }
+
+  const orderedDays = [...(days || [])].reverse();
+  const dayIds = orderedDays.map((day) => day.id);
+  let tasks = [];
+
+  if (dayIds.length > 0) {
+    const { data: taskRows, error: tasksError } = await withTimeout(supabaseClient.from("day_tasks")
+      .select("day_id,title_snapshot,completed_at,sort_order")
+      .eq("owner_key_hash", ownerHash)
+      .in("day_id", dayIds)
+      .order("sort_order", { ascending: true }), "Loading history tasks");
+
+    if (tasksError) {
+      throw tasksError;
+    }
+
+    tasks = taskRows || [];
+  }
+
+  state.history = orderedDays.map((day) => ({
+    day,
+    tasks: tasks.filter((task) => task.day_id === day.id)
+  }));
 }
 
 async function createActivity(title) {
@@ -563,6 +625,7 @@ async function removeTask(id) {
 function render() {
   const hasOwner = Boolean(owner.hash);
   const hasDatabase = Boolean(session) && dbReady && hasOwner && !dbBusy;
+  const hasSummary = Boolean(state.summary);
   const readableDate = getReadableTallinnDate();
   startView.hidden = state.dayStarted;
   dayView.hidden = !state.dayStarted;
@@ -571,6 +634,8 @@ function render() {
   syncLabel.textContent = hasOwner ? `Sync name: ${owner.name}` : "";
   syncLabelDay.hidden = !hasOwner;
   syncLabelDay.textContent = hasOwner ? `Sync name: ${owner.name}` : "";
+  appTitle.textContent = hasSummary ? "Day complete" : "Time App";
+  startDay.textContent = hasSummary ? "Restart Today" : "Start Day";
   startDay.disabled = !hasDatabase;
   activityForm.querySelector("button").disabled = !hasDatabase;
   done.disabled = !hasDatabase;
@@ -580,6 +645,7 @@ function render() {
   todayLabel.textContent = readableDate;
 
   renderSummary();
+  renderHistory();
 
   const current = getCurrentTask();
   const completed = state.dayTasks.filter((task) => task.completed_at).length;
@@ -637,6 +703,75 @@ function render() {
     item.append(number, title, actions);
     activityWheel.append(item);
   });
+}
+
+function renderHistory() {
+  history.hidden = state.dayStarted || !owner.hash || state.history.length === 0;
+  completionChart.innerHTML = "";
+  taskTimeChart.innerHTML = "";
+
+  if (history.hidden) {
+    return;
+  }
+
+  for (const item of state.history) {
+    const completed = item.tasks.filter((task) => task.completed_at).length;
+    const total = item.tasks.length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "chart-row";
+
+    const label = document.createElement("span");
+    label.className = "chart-label";
+    label.textContent = getShortDayLabel(item.day.day_date);
+
+    const track = document.createElement("span");
+    track.className = "bar-track";
+
+    const fill = document.createElement("span");
+    fill.className = "bar-fill";
+    fill.style.width = `${percent}%`;
+
+    const value = document.createElement("span");
+    value.className = "chart-value";
+    value.textContent = `${completed}/${total}`;
+
+    track.append(fill);
+    row.append(label, track, value);
+    completionChart.append(row);
+  }
+
+  for (const item of state.history) {
+    const row = document.createElement("div");
+    row.className = "time-row";
+
+    const label = document.createElement("span");
+    label.className = "chart-label";
+    label.textContent = getShortDayLabel(item.day.day_date);
+
+    const chips = document.createElement("div");
+    chips.className = "time-chips";
+    const completedTasks = item.tasks
+      .filter((task) => task.completed_at)
+      .sort((a, b) => getTallinnTimeMinutes(a.completed_at) - getTallinnTimeMinutes(b.completed_at));
+
+    if (completedTasks.length === 0) {
+      const empty = document.createElement("span");
+      empty.className = "empty-chip";
+      empty.textContent = "No completed tasks";
+      chips.append(empty);
+    }
+
+    for (const task of completedTasks) {
+      const chip = document.createElement("span");
+      chip.className = "time-chip";
+      chip.textContent = `${task.title_snapshot} ${getTallinnTime(task.completed_at)}`;
+      chips.append(chip);
+    }
+
+    row.append(label, chips);
+    taskTimeChart.append(row);
+  }
 }
 
 function renderSummary() {
