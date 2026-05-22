@@ -63,6 +63,7 @@ input:focus-visible {
 }
 
 .start-view,
+.auth-view,
 .current-card,
 .activity-form,
 .wheel-section {
@@ -72,10 +73,30 @@ input:focus-visible {
   box-shadow: 0 18px 52px rgba(20, 33, 30, 0.12);
 }
 
-.start-view {
+.start-view,
+.auth-view {
   display: grid;
   gap: 28px;
   padding: 28px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.status-message {
+  min-height: 22px;
+  margin: 0;
+  color: #60736f;
+  font-weight: 750;
 }
 
 .summary {
@@ -152,6 +173,11 @@ h2 {
   border: 1px solid rgba(15, 118, 110, 0.22);
   background: rgba(255, 255, 255, 0.68);
   color: #0f766e;
+}
+
+.ghost.small {
+  justify-self: center;
+  min-height: 38px;
 }
 
 .day-view {
@@ -325,6 +351,7 @@ input {
   }
 
   .start-view,
+  .auth-view,
   .current-card,
   .activity-form,
   .wheel-section {
@@ -351,6 +378,7 @@ input {
 
   .progress-label,
   .current-label,
+  .status-message,
   label {
     color: #b6c8c3;
   }
