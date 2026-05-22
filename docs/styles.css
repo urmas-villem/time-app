@@ -1,8 +1,8 @@
 :root {
   color-scheme: light dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f5faf8;
-  color: #15211f;
+  background: #f3f8f6;
+  color: #14211e;
 }
 
 * {
@@ -12,7 +12,9 @@
 body {
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(145deg, #f5faf8 0%, #e5f3ef 54%, #f7efe4 100%);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(20, 184, 166, 0.2), transparent 24rem),
+    linear-gradient(145deg, #f3f8f6 0%, #e5f2ee 50%, #f7eee2 100%);
 }
 
 button,
@@ -20,33 +22,63 @@ input {
   font: inherit;
 }
 
+button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 850;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 3px;
+}
+
 .screen {
-  width: min(100%, 480px);
+  width: min(100%, 520px);
   min-height: 100vh;
   margin: 0 auto;
-  padding: max(24px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+  padding: max(22px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
   display: grid;
   align-content: center;
-  gap: 18px;
 }
 
-.timer,
-.tasks {
-  border: 1px solid rgba(21, 33, 31, 0.12);
+.start-view,
+.day-view {
+  width: 100%;
+}
+
+.start-view,
+.current-card,
+.activity-form,
+.wheel-section {
+  border: 1px solid rgba(20, 33, 30, 0.12);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 48px rgba(21, 33, 31, 0.12);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 18px 52px rgba(20, 33, 30, 0.12);
 }
 
-.timer {
-  padding: 26px;
+.start-view {
+  display: grid;
+  gap: 28px;
+  padding: 28px;
 }
 
 .eyebrow {
   margin: 0 0 8px;
   color: #0f766e;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -58,181 +90,250 @@ h2 {
 }
 
 h1 {
-  font-size: 2.8rem;
-  line-height: 1;
+  font-size: clamp(2.8rem, 16vw, 5rem);
+  line-height: 0.94;
 }
 
 h2 {
-  font-size: 1.15rem;
+  font-size: 1.22rem;
+  line-height: 1.15;
 }
 
-.clock {
-  margin: 26px 0 22px;
-  font-size: clamp(4rem, 22vw, 6rem);
-  font-weight: 850;
-  line-height: 0.95;
-  font-variant-numeric: tabular-nums;
-}
-
-.controls,
-.task-entry {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-}
-
-button {
-  min-height: 50px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 8px;
+.primary {
   background: #0f766e;
   color: #ffffff;
-  font-weight: 800;
 }
 
-button.secondary {
-  border: 1px solid rgba(15, 118, 110, 0.24);
-  background: #eef8f5;
+.primary.big {
+  min-height: 58px;
+  font-size: 1.08rem;
+}
+
+.ghost {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  background: rgba(255, 255, 255, 0.68);
   color: #0f766e;
 }
 
-button:active {
-  transform: translateY(1px);
+.day-view {
+  display: grid;
+  gap: 14px;
 }
 
-button:focus-visible,
-input:focus-visible {
-  outline: 3px solid #f59e0b;
-  outline-offset: 3px;
-}
-
-.tasks {
-  padding: 18px;
-}
-
+.topbar,
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 14px;
 }
 
-#task-count {
-  color: #61716e;
-  font-size: 0.9rem;
-  font-weight: 700;
+.topbar h1 {
+  font-size: 2.25rem;
+}
+
+.current-card {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.progress-label,
+#activity-count {
+  color: #60736f;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+#current-activity {
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  overflow-wrap: anywhere;
+  font-size: clamp(2rem, 10vw, 4.25rem);
+}
+
+.activity-form,
+.wheel-section {
+  padding: 16px;
 }
 
 label {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 8px;
   color: #42524f;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 850;
+}
+
+.entry-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
 }
 
 input {
   min-width: 0;
   min-height: 50px;
-  border: 1px solid rgba(21, 33, 31, 0.16);
+  border: 1px solid rgba(20, 33, 30, 0.16);
   border-radius: 8px;
   padding: 0 13px;
   background: #ffffff;
-  color: #15211f;
+  color: #14211e;
 }
 
-ul {
-  list-style: none;
-  margin: 16px 0 0;
-  padding: 0;
+.activity-wheel {
+  position: relative;
+  max-height: 292px;
+  margin: 14px 0 0;
+  padding: 72px 0;
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  overflow-y: auto;
+  list-style: none;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(transparent 0%, #000 20%, #000 80%, transparent 100%);
+  mask-image: linear-gradient(transparent 0%, #000 20%, #000 80%, transparent 100%);
 }
 
-li {
+.activity-wheel li {
+  min-height: 72px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 8px 10px;
-  border: 1px solid rgba(21, 33, 31, 0.1);
+  padding: 10px;
+  border: 1px solid rgba(20, 33, 30, 0.1);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.66);
+  scroll-snap-align: center;
 }
 
-input[type="checkbox"] {
-  width: 22px;
-  min-height: 22px;
+.activity-wheel li.active {
+  border-color: rgba(15, 118, 110, 0.42);
+  background: #e9f7f4;
+  box-shadow: inset 4px 0 0 #0f766e;
 }
 
-.task-title {
+.activity-wheel li.done {
+  opacity: 0.66;
+}
+
+.activity-number {
+  color: #0f766e;
+  font-size: 0.86rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.activity-title {
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
   overflow-wrap: anywhere;
 }
 
-li.done .task-title {
-  color: #6b7b78;
+.activity-wheel li.done .activity-title {
+  color: #6a7b77;
   text-decoration: line-through;
 }
 
-.delete {
-  min-height: 36px;
-  padding: 0 10px;
-  background: transparent;
-  color: #8a2d2d;
+.activity-actions {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 6px;
+}
+
+.mini {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid rgba(20, 33, 30, 0.12);
+  background: #ffffff;
+  color: #26413c;
+  font-size: 0.78rem;
+}
+
+.mini.danger {
+  color: #963333;
+}
+
+@media (max-width: 390px) {
+  .activity-wheel li {
+    grid-template-columns: auto 1fr;
+  }
+
+  .activity-actions {
+    grid-column: 2;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    background: #101816;
-    color: #f2fbf8;
+    background: #0f1816;
+    color: #f1fbf8;
   }
 
   body {
-    background: linear-gradient(145deg, #101816 0%, #15241f 54%, #251e18 100%);
+    background:
+      radial-gradient(circle at 18% 8%, rgba(20, 184, 166, 0.16), transparent 24rem),
+      linear-gradient(145deg, #0f1816 0%, #14231f 52%, #251e18 100%);
   }
 
-  .timer,
-  .tasks {
+  .start-view,
+  .current-card,
+  .activity-form,
+  .wheel-section {
     border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(16, 24, 22, 0.84);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+    background: rgba(15, 24, 22, 0.86);
+    box-shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
   }
 
-  .eyebrow {
+  .eyebrow,
+  .activity-number {
     color: #5eead4;
   }
 
-  button {
+  .primary {
     background: #14b8a6;
     color: #05201c;
   }
 
-  button.secondary {
-    border-color: rgba(94, 234, 212, 0.26);
+  .ghost {
+    border-color: rgba(94, 234, 212, 0.24);
     background: rgba(20, 184, 166, 0.12);
     color: #9ff5e8;
   }
 
-  label,
-  #task-count {
-    color: #b8c8c4;
+  .progress-label,
+  #activity-count,
+  label {
+    color: #b6c8c3;
   }
 
   input,
-  li {
-    border-color: rgba(255, 255, 255, 0.14);
+  .activity-wheel li,
+  .mini {
+    border-color: rgba(255, 255, 255, 0.13);
     background: rgba(255, 255, 255, 0.06);
-    color: #f2fbf8;
+    color: #f1fbf8;
   }
 
-  li.done .task-title {
-    color: #91a29e;
+  .activity-wheel li.active {
+    border-color: rgba(94, 234, 212, 0.44);
+    background: rgba(20, 184, 166, 0.14);
+    box-shadow: inset 4px 0 0 #5eead4;
   }
 
-  .delete {
+  .activity-wheel li.done .activity-title {
+    color: #8fa19d;
+  }
+
+  .mini.danger {
     color: #fca5a5;
   }
 }

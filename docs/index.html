@@ -14,29 +14,42 @@
   </head>
   <body>
     <main class="screen">
-      <section class="timer" aria-labelledby="app-title">
-        <p class="eyebrow">Focus session</p>
+      <section id="start-view" class="start-view" aria-labelledby="app-title">
+        <p class="eyebrow" id="today-label">Tallinn day</p>
         <h1 id="app-title">Time App</h1>
-        <div class="clock" id="clock" aria-live="polite">25:00</div>
-        <div class="controls">
-          <button id="start-pause" type="button">Start</button>
-          <button id="reset" type="button" class="secondary">Reset</button>
-        </div>
+        <button id="start-day" type="button" class="primary big">Start Day</button>
       </section>
 
-      <section class="tasks" aria-labelledby="tasks-title">
-        <div class="section-head">
-          <h2 id="tasks-title">Today</h2>
-          <span id="task-count">0 open</span>
-        </div>
-        <form id="task-form">
-          <label for="task-input">Task</label>
-          <div class="task-entry">
-            <input id="task-input" name="task" type="text" autocomplete="off" placeholder="Add one thing">
-            <button type="submit">Add</button>
+      <section id="day-view" class="day-view" aria-labelledby="current-label" hidden>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="active-date">Tallinn day</p>
+            <h1 id="current-label">Now</h1>
+          </div>
+          <button id="end-day" type="button" class="ghost">End Day</button>
+        </header>
+
+        <section class="current-card" aria-live="polite">
+          <span id="progress-label" class="progress-label">0 / 0</span>
+          <h2 id="current-activity">Add your first activity</h2>
+          <button id="done" type="button" class="primary">Done</button>
+        </section>
+
+        <form id="activity-form" class="activity-form">
+          <label for="activity-input">Activity</label>
+          <div class="entry-row">
+            <input id="activity-input" name="activity" type="text" autocomplete="off" placeholder="Have coffee">
+            <button type="submit" class="primary">Add</button>
           </div>
         </form>
-        <ul id="task-list" aria-label="Task list"></ul>
+
+        <section class="wheel-section" aria-labelledby="wheel-label">
+          <div class="section-head">
+            <h2 id="wheel-label">Order</h2>
+            <span id="activity-count">0 activities</span>
+          </div>
+          <ol id="activity-wheel" class="activity-wheel" aria-label="Activity order"></ol>
+        </section>
       </section>
     </main>
 

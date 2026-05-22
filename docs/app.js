@@ -1,144 +1,266 @@
-const SESSION_SECONDS = 25 * 60;
-const stateKey = "time-app-state";
+const STORAGE_KEY = "time-app-v2";
+const TALLINN_TIME_ZONE = "Europe/Tallinn";
 
-const clock = document.querySelector("#clock");
-const startPause = document.querySelector("#start-pause");
-const reset = document.querySelector("#reset");
-const taskForm = document.querySelector("#task-form");
-const taskInput = document.querySelector("#task-input");
-const taskList = document.querySelector("#task-list");
-const taskCount = document.querySelector("#task-count");
+const startView = document.querySelector("#start-view");
+const dayView = document.querySelector("#day-view");
+const todayLabel = document.querySelector("#today-label");
+const activeDate = document.querySelector("#active-date");
+const startDay = document.querySelector("#start-day");
+const endDay = document.querySelector("#end-day");
+const progressLabel = document.querySelector("#progress-label");
+const currentActivity = document.querySelector("#current-activity");
+const done = document.querySelector("#done");
+const activityForm = document.querySelector("#activity-form");
+const activityInput = document.querySelector("#activity-input");
+const activityWheel = document.querySelector("#activity-wheel");
+const activityCount = document.querySelector("#activity-count");
 
-let state = loadState();
-let ticker = null;
+let state = normalizeState(loadState());
+
+function getTallinnDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: TALLINN_TIME_ZONE,
+    year: "numeric"
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getReadableTallinnDate() {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    timeZone: TALLINN_TIME_ZONE,
+    weekday: "short"
+  }).format(new Date());
+}
+
+function createEmptyState() {
+  return {
+    date: getTallinnDate(),
+    dayStarted: false,
+    currentIndex: 0,
+    activities: []
+  };
+}
 
 function loadState() {
-  const saved = localStorage.getItem(stateKey);
+  const saved = localStorage.getItem(STORAGE_KEY);
 
   if (!saved) {
-    return { remaining: SESSION_SECONDS, running: false, tasks: [] };
+    return createEmptyState();
   }
 
   try {
     return JSON.parse(saved);
   } catch {
-    return { remaining: SESSION_SECONDS, running: false, tasks: [] };
+    return createEmptyState();
   }
+}
+
+function normalizeState(candidate) {
+  const today = getTallinnDate();
+  const activities = Array.isArray(candidate.activities)
+    ? candidate.activities.map((activity) => ({
+        id: activity.id || crypto.randomUUID(),
+        title: String(activity.title || "").trim(),
+        done: Boolean(activity.done)
+      })).filter((activity) => activity.title)
+    : [];
+
+  const normalized = {
+    date: candidate.date || today,
+    dayStarted: Boolean(candidate.dayStarted),
+    currentIndex: Number.isInteger(candidate.currentIndex) ? candidate.currentIndex : 0,
+    activities
+  };
+
+  if (normalized.date !== today) {
+    normalized.date = today;
+    normalized.dayStarted = false;
+    normalized.currentIndex = 0;
+    normalized.activities = normalized.activities.map((activity) => ({ ...activity, done: false }));
+  }
+
+  normalized.currentIndex = clampIndex(normalized.currentIndex, normalized.activities);
+  return normalized;
 }
 
 function saveState() {
-  localStorage.setItem(stateKey, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-function formatTime(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const leftover = seconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(leftover).padStart(2, "0")}`;
-}
-
-function render() {
-  clock.textContent = formatTime(state.remaining);
-  startPause.textContent = state.running ? "Pause" : "Start";
-
-  taskList.innerHTML = "";
-
-  for (const task of state.tasks) {
-    const item = document.createElement("li");
-    item.className = task.done ? "done" : "";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = task.done;
-    checkbox.setAttribute("aria-label", `Mark ${task.title} done`);
-    checkbox.addEventListener("change", () => {
-      task.done = checkbox.checked;
-      saveState();
-      render();
-    });
-
-    const title = document.createElement("span");
-    title.className = "task-title";
-    title.textContent = task.title;
-
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "delete";
-    remove.textContent = "Delete";
-    remove.addEventListener("click", () => {
-      state.tasks = state.tasks.filter((candidate) => candidate.id !== task.id);
-      saveState();
-      render();
-    });
-
-    item.append(checkbox, title, remove);
-    taskList.append(item);
+function clampIndex(index, activities) {
+  if (activities.length === 0) {
+    return 0;
   }
 
-  const openTasks = state.tasks.filter((task) => !task.done).length;
-  taskCount.textContent = `${openTasks} open`;
+  return Math.max(0, Math.min(index, activities.length - 1));
 }
 
-function startTimer() {
-  if (ticker) {
+function getCurrentActivity() {
+  return state.activities[state.currentIndex];
+}
+
+function moveActivity(id, direction) {
+  const from = state.activities.findIndex((activity) => activity.id === id);
+  const to = from + direction;
+
+  if (from < 0 || to < 0 || to >= state.activities.length) {
     return;
   }
 
-  ticker = setInterval(() => {
-    if (state.remaining <= 1) {
-      state.remaining = 0;
-      state.running = false;
-      stopTimer();
-    } else {
-      state.remaining -= 1;
-    }
+  const [activity] = state.activities.splice(from, 1);
+  state.activities.splice(to, 0, activity);
 
-    saveState();
-    render();
-  }, 1000);
-}
-
-function stopTimer() {
-  clearInterval(ticker);
-  ticker = null;
-}
-
-startPause.addEventListener("click", () => {
-  state.running = !state.running;
-
-  if (state.running) {
-    startTimer();
-  } else {
-    stopTimer();
+  if (state.currentIndex === from) {
+    state.currentIndex = to;
+  } else if (direction < 0 && state.currentIndex === to) {
+    state.currentIndex += 1;
+  } else if (direction > 0 && state.currentIndex === to) {
+    state.currentIndex -= 1;
   }
 
   saveState();
   render();
-});
+}
 
-reset.addEventListener("click", () => {
-  state.remaining = SESSION_SECONDS;
-  state.running = false;
-  stopTimer();
+function removeActivity(id) {
+  const removedIndex = state.activities.findIndex((activity) => activity.id === id);
+  state.activities = state.activities.filter((activity) => activity.id !== id);
+
+  if (removedIndex <= state.currentIndex) {
+    state.currentIndex -= 1;
+  }
+
+  state.currentIndex = clampIndex(state.currentIndex, state.activities);
+  saveState();
+  render();
+}
+
+function render() {
+  const readableDate = getReadableTallinnDate();
+  todayLabel.textContent = readableDate;
+  activeDate.textContent = readableDate;
+  startView.hidden = state.dayStarted;
+  dayView.hidden = !state.dayStarted;
+
+  const current = getCurrentActivity();
+  const completed = state.activities.filter((activity) => activity.done).length;
+  progressLabel.textContent = `${completed} / ${state.activities.length}`;
+  activityCount.textContent = `${state.activities.length} ${state.activities.length === 1 ? "activity" : "activities"}`;
+
+  if (current) {
+    currentActivity.textContent = current.done ? "Day complete" : current.title;
+    done.disabled = current.done;
+  } else {
+    currentActivity.textContent = "Add your first activity";
+    done.disabled = true;
+  }
+
+  activityWheel.innerHTML = "";
+
+  state.activities.forEach((activity, index) => {
+    const item = document.createElement("li");
+    item.className = [
+      index === state.currentIndex ? "active" : "",
+      activity.done ? "done" : ""
+    ].filter(Boolean).join(" ");
+
+    const number = document.createElement("span");
+    number.className = "activity-number";
+    number.textContent = String(index + 1).padStart(2, "0");
+
+    const title = document.createElement("button");
+    title.type = "button";
+    title.className = "activity-title";
+    title.textContent = activity.title;
+    title.addEventListener("click", () => {
+      state.currentIndex = index;
+      saveState();
+      render();
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "activity-actions";
+
+    const up = document.createElement("button");
+    up.type = "button";
+    up.className = "mini";
+    up.textContent = "Up";
+    up.disabled = index === 0;
+    up.addEventListener("click", () => moveActivity(activity.id, -1));
+
+    const down = document.createElement("button");
+    down.type = "button";
+    down.className = "mini";
+    down.textContent = "Down";
+    down.disabled = index === state.activities.length - 1;
+    down.addEventListener("click", () => moveActivity(activity.id, 1));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "mini danger";
+    remove.textContent = "Delete";
+    remove.addEventListener("click", () => removeActivity(activity.id));
+
+    actions.append(up, down, remove);
+    item.append(number, title, actions);
+    activityWheel.append(item);
+  });
+}
+
+startDay.addEventListener("click", () => {
+  state.date = getTallinnDate();
+  state.dayStarted = true;
+  state.currentIndex = 0;
+  state.activities = state.activities.map((activity) => ({ ...activity, done: false }));
   saveState();
   render();
 });
 
-taskForm.addEventListener("submit", (event) => {
+endDay.addEventListener("click", () => {
+  state.dayStarted = false;
+  state.currentIndex = 0;
+  state.activities = state.activities.map((activity) => ({ ...activity, done: false }));
+  saveState();
+  render();
+});
+
+done.addEventListener("click", () => {
+  const current = getCurrentActivity();
+
+  if (!current) {
+    return;
+  }
+
+  current.done = true;
+  const nextIndex = state.activities.findIndex((activity, index) => index > state.currentIndex && !activity.done);
+  state.currentIndex = nextIndex === -1 ? state.activities.length - 1 : nextIndex;
+  saveState();
+  render();
+});
+
+activityForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const title = taskInput.value.trim();
+  const title = activityInput.value.trim();
 
   if (!title) {
     return;
   }
 
-  state.tasks.push({
+  state.activities.push({
     id: crypto.randomUUID(),
     title,
     done: false
   });
 
-  taskInput.value = "";
+  state.currentIndex = clampIndex(state.currentIndex, state.activities);
+  activityInput.value = "";
   saveState();
   render();
 });
@@ -147,8 +269,5 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js");
 }
 
-if (state.running) {
-  startTimer();
-}
-
+saveState();
 render();
