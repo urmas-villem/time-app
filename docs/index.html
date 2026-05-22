@@ -10,13 +10,21 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-    <link rel="stylesheet" href="./styles.css?v=df2019f">
+    <link rel="stylesheet" href="./styles.css?v=shared-name-1">
   </head>
   <body>
     <main class="screen">
       <section id="start-view" class="start-view" aria-labelledby="app-title">
         <p class="eyebrow" id="today-label">Tallinn day</p>
         <h1 id="app-title">Time App</h1>
+        <form id="sync-form" class="sync-form">
+          <label for="sync-name">Sync name</label>
+          <div class="entry-row">
+            <input id="sync-name" name="sync-name" type="text" autocomplete="off" placeholder="user 1">
+            <button type="submit" class="primary">Use</button>
+          </div>
+        </form>
+        <p id="sync-label" class="sync-label" hidden></p>
         <button id="start-day" type="button" class="primary big">Start Day</button>
         <div id="db-warning-start" class="db-warning" hidden>
           <p id="status-message-start" aria-live="polite"></p>
@@ -67,6 +75,6 @@
     </main>
 
     <script src="./supabase.js?v=02fb662"></script>
-    <script src="./app.js?v=df2019f"></script>
+    <script src="./app.js?v=shared-name-1"></script>
   </body>
 </html>

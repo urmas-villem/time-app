@@ -126,6 +126,17 @@ input:focus-visible {
   padding-left: 20px;
 }
 
+.sync-form {
+  display: grid;
+  gap: 8px;
+}
+
+.sync-label {
+  margin: 0;
+  color: #60736f;
+  font-weight: 850;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: #0f766e;
@@ -366,6 +377,7 @@ input {
 
   .progress-label,
   .current-label,
+  .sync-label,
   label {
     color: #b6c8c3;
   }

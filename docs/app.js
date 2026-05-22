@@ -1,6 +1,7 @@
 const SUPABASE_URL = "https://apxplnunivpegqwegtvm.supabase.co";
 const SUPABASE_KEY = "sb_publishable_CaLa5ZIsn8L8UUhC4bbVMQ_KnzfaXH1";
 const CACHE_KEY = "time-app-cache-v1";
+const OWNER_KEY = "time-app-owner-v1";
 const TALLINN_TIME_ZONE = "Europe/Tallinn";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -11,6 +12,9 @@ const statusMessageStart = document.querySelector("#status-message-start");
 const statusMessageDay = document.querySelector("#status-message-day");
 const retrySyncStart = document.querySelector("#retry-sync-start");
 const retrySyncDay = document.querySelector("#retry-sync-day");
+const syncForm = document.querySelector("#sync-form");
+const syncName = document.querySelector("#sync-name");
+const syncLabel = document.querySelector("#sync-label");
 const startView = document.querySelector("#start-view");
 const dayView = document.querySelector("#day-view");
 const todayLabel = document.querySelector("#today-label");
@@ -40,6 +44,7 @@ let state = {
 let dbReady = false;
 let dbError = "";
 let dbBusy = false;
+let owner = loadOwner();
 
 function getTallinnDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -79,6 +84,78 @@ function saveCache() {
     date: getTallinnDate(),
     state
   }));
+}
+
+function loadOwner() {
+  const saved = localStorage.getItem(OWNER_KEY);
+
+  if (!saved) {
+    return { hash: "", name: "" };
+  }
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return { hash: "", name: "" };
+  }
+}
+
+function saveOwner(nextOwner) {
+  owner = nextOwner;
+  localStorage.setItem(OWNER_KEY, JSON.stringify(nextOwner));
+}
+
+async function hashOwnerName(name) {
+  const normalized = name.trim().toLowerCase();
+  const bytes = new TextEncoder().encode(normalized);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function requireOwnerHash() {
+  if (!owner.hash) {
+    throw new Error("Set a sync name before using the database.");
+  }
+
+  return owner.hash;
+}
+
+async function ensureOwnerLink() {
+  const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
+
+  const { error } = await withTimeout(supabaseClient.from("device_owners")
+    .upsert({
+      owner_key_hash: ownerHash,
+      user_id: userId
+    }, { onConflict: "user_id,owner_key_hash" }), "Linking sync name");
+
+  if (error) {
+    throw error;
+  }
+
+  const ownerUpdates = await withTimeout(Promise.all([
+    supabaseClient.from("activities")
+      .update({ owner_key_hash: ownerHash })
+      .eq("user_id", userId)
+      .is("owner_key_hash", null),
+    supabaseClient.from("days")
+      .update({ owner_key_hash: ownerHash })
+      .eq("user_id", userId)
+      .is("owner_key_hash", null),
+    supabaseClient.from("day_tasks")
+      .update({ owner_key_hash: ownerHash })
+      .eq("user_id", userId)
+      .is("owner_key_hash", null)
+  ]), "Claiming existing device data");
+
+  const ownerError = ownerUpdates.find((result) => result.error)?.error;
+
+  if (ownerError) {
+    throw ownerError;
+  }
 }
 
 function setMessage(message) {
@@ -159,6 +236,14 @@ async function loadApp() {
     session = data.session;
   }
 
+  if (!owner.hash) {
+    dbReady = true;
+    render();
+    setMessage("");
+    return;
+  }
+
+  await ensureOwnerLink();
   await loadData();
   dbReady = true;
   render();
@@ -166,18 +251,18 @@ async function loadApp() {
 }
 
 async function loadData() {
-  const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
   const today = getTallinnDate();
 
   const [{ data: activities, error: activitiesError }, { data: day, error: dayError }] = await withTimeout(Promise.all([
     supabaseClient.from("activities")
       .select("*")
-      .eq("user_id", userId)
+      .eq("owner_key_hash", ownerHash)
       .eq("active", true)
       .order("sort_order", { ascending: true }),
     supabaseClient.from("days")
       .select("*")
-      .eq("user_id", userId)
+      .eq("owner_key_hash", ownerHash)
       .eq("day_date", today)
       .maybeSingle()
   ]), "Loading database data");
@@ -200,6 +285,7 @@ async function loadData() {
     const { data: tasks, error: tasksError } = await withTimeout(supabaseClient.from("day_tasks")
       .select("*")
       .eq("day_id", day.id)
+      .eq("owner_key_hash", ownerHash)
       .order("sort_order", { ascending: true }), "Loading today's tasks");
 
     if (tasksError) {
@@ -219,11 +305,13 @@ async function loadData() {
 
 async function createActivity(title) {
   const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
   const nextOrder = state.activities.length;
 
   const { data: activity, error } = await withTimeout(supabaseClient.from("activities")
     .insert({
       active: true,
+      owner_key_hash: ownerHash,
       sort_order: nextOrder,
       title,
       user_id: userId
@@ -242,6 +330,7 @@ async function createActivity(title) {
       .insert({
         activity_id: activity.id,
         day_id: state.day.id,
+        owner_key_hash: ownerHash,
         sort_order: state.dayTasks.length,
         title_snapshot: activity.title,
         user_id: userId
@@ -262,16 +351,39 @@ async function createActivity(title) {
 
 async function startToday() {
   const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
   const today = getTallinnDate();
   const now = new Date().toISOString();
 
-  const { data: day, error } = await withTimeout(supabaseClient.from("days")
-    .upsert({
-      day_date: today,
-      ended_at: null,
-      started_at: now,
-      user_id: userId
-    }, { onConflict: "user_id,day_date" })
+  const { data: existingDay, error: existingError } = await withTimeout(supabaseClient.from("days")
+    .select("*")
+    .eq("owner_key_hash", ownerHash)
+    .eq("day_date", today)
+    .maybeSingle(), "Checking today's day");
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const dayRequest = existingDay
+    ? supabaseClient.from("days")
+      .update({
+        ended_at: null,
+        started_at: now,
+        user_id: userId
+      })
+      .eq("id", existingDay.id)
+      .eq("owner_key_hash", ownerHash)
+    : supabaseClient.from("days")
+      .insert({
+        day_date: today,
+        ended_at: null,
+        owner_key_hash: ownerHash,
+        started_at: now,
+        user_id: userId
+      });
+
+  const { data: day, error } = await withTimeout(dayRequest
     .select()
     .single(), "Starting day");
 
@@ -280,7 +392,7 @@ async function startToday() {
   }
 
   const { error: deleteError } = await withTimeout(
-    supabaseClient.from("day_tasks").delete().eq("day_id", day.id).eq("user_id", userId),
+    supabaseClient.from("day_tasks").delete().eq("day_id", day.id).eq("owner_key_hash", ownerHash),
     "Resetting today's tasks"
   );
 
@@ -291,6 +403,7 @@ async function startToday() {
   const taskRows = sortByOrder(state.activities).map((activity, index) => ({
     activity_id: activity.id,
     day_id: day.id,
+    owner_key_hash: ownerHash,
     sort_order: index,
     title_snapshot: activity.title,
     user_id: userId
@@ -319,7 +432,7 @@ async function startToday() {
 }
 
 async function endToday() {
-  const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
 
   if (!state.day) {
     return;
@@ -329,7 +442,7 @@ async function endToday() {
   const { data: day, error } = await withTimeout(supabaseClient.from("days")
     .update({ ended_at: endedAt })
     .eq("id", state.day.id)
-    .eq("user_id", userId)
+    .eq("owner_key_hash", ownerHash)
     .select()
     .single(), "Ending day");
 
@@ -345,7 +458,7 @@ async function endToday() {
 }
 
 async function completeCurrentTask() {
-  const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
   const task = getCurrentTask();
 
   if (!task || task.completed_at) {
@@ -356,7 +469,7 @@ async function completeCurrentTask() {
   const { data, error } = await withTimeout(supabaseClient.from("day_tasks")
     .update({ completed_at: completedAt })
     .eq("id", task.id)
-    .eq("user_id", userId)
+    .eq("owner_key_hash", ownerHash)
     .select()
     .single(), "Completing task");
 
@@ -371,7 +484,7 @@ async function completeCurrentTask() {
 }
 
 async function moveTask(id, direction) {
-  const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
   const taskIndex = state.dayTasks.findIndex((task) => task.id === id);
   const targetIndex = taskIndex + direction;
 
@@ -386,7 +499,9 @@ async function moveTask(id, direction) {
   state.currentIndex = targetIndex;
 
   const taskUpdates = state.dayTasks.map((item) => (
-    supabaseClient.from("day_tasks").update({ sort_order: item.sort_order }).eq("id", item.id)
+    supabaseClient.from("day_tasks").update({ sort_order: item.sort_order })
+      .eq("id", item.id)
+      .eq("owner_key_hash", ownerHash)
   ));
 
   const activityUpdates = state.dayTasks
@@ -395,7 +510,7 @@ async function moveTask(id, direction) {
       supabaseClient.from("activities")
         .update({ sort_order: index })
         .eq("id", item.activity_id)
-        .eq("user_id", userId)
+        .eq("owner_key_hash", ownerHash)
     ));
 
   await withTimeout(Promise.all([...taskUpdates, ...activityUpdates]), "Reordering tasks");
@@ -410,7 +525,7 @@ async function moveTask(id, direction) {
 }
 
 async function removeTask(id) {
-  const userId = requireUserId();
+  const ownerHash = requireOwnerHash();
   const task = state.dayTasks.find((candidate) => candidate.id === id);
 
   if (!task) {
@@ -418,7 +533,7 @@ async function removeTask(id) {
   }
 
   const { error: deleteTaskError } = await withTimeout(
-    supabaseClient.from("day_tasks").delete().eq("id", id).eq("user_id", userId),
+    supabaseClient.from("day_tasks").delete().eq("id", id).eq("owner_key_hash", ownerHash),
     "Deleting task"
   );
 
@@ -430,7 +545,7 @@ async function removeTask(id) {
     const { error: activityError } = await withTimeout(supabaseClient.from("activities")
       .update({ active: false })
       .eq("id", task.activity_id)
-      .eq("user_id", userId), "Deleting activity");
+      .eq("owner_key_hash", ownerHash), "Deleting activity");
 
     if (activityError) {
       throw activityError;
@@ -445,10 +560,14 @@ async function removeTask(id) {
 }
 
 function render() {
-  const hasDatabase = Boolean(session) && dbReady && !dbBusy;
+  const hasOwner = Boolean(owner.hash);
+  const hasDatabase = Boolean(session) && dbReady && hasOwner && !dbBusy;
   const readableDate = getReadableTallinnDate();
   startView.hidden = state.dayStarted;
   dayView.hidden = !state.dayStarted;
+  syncForm.hidden = !session || hasOwner || state.dayStarted;
+  syncLabel.hidden = !hasOwner || state.dayStarted;
+  syncLabel.textContent = hasOwner ? `Sync name: ${owner.name}` : "";
   startDay.disabled = !hasDatabase;
   activityForm.querySelector("button").disabled = !hasDatabase;
   done.disabled = !hasDatabase;
@@ -568,6 +687,34 @@ endDay.addEventListener("click", () => handleAction(endToday));
 done.addEventListener("click", () => handleAction(completeCurrentTask));
 retrySyncStart.addEventListener("click", () => loadApp());
 retrySyncDay.addEventListener("click", () => loadApp());
+
+syncForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const name = syncName.value.trim();
+
+  if (!name) {
+    return;
+  }
+
+  handleAction(async () => {
+    const hash = await hashOwnerName(name);
+    const nextOwner = { hash, name };
+    const previousOwner = owner;
+
+    owner = nextOwner;
+
+    try {
+      await ensureOwnerLink();
+      await loadData();
+      saveOwner(nextOwner);
+      syncName.value = "";
+    } catch (error) {
+      owner = previousOwner;
+      throw error;
+    }
+  });
+});
 
 activityForm.addEventListener("submit", (event) => {
   event.preventDefault();
