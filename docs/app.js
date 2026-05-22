@@ -170,14 +170,12 @@ async function loadData() {
   const today = getTallinnDate();
 
   const [{ data: activities, error: activitiesError }, { data: day, error: dayError }] = await withTimeout(Promise.all([
-    supabase
-      .from("activities")
+    supabaseClient.from("activities")
       .select("*")
       .eq("user_id", userId)
       .eq("active", true)
       .order("sort_order", { ascending: true }),
-    supabase
-      .from("days")
+    supabaseClient.from("days")
       .select("*")
       .eq("user_id", userId)
       .eq("day_date", today)
@@ -199,8 +197,7 @@ async function loadData() {
   state.dayTasks = [];
 
   if (day) {
-    const { data: tasks, error: tasksError } = await withTimeout(supabase
-      .from("day_tasks")
+    const { data: tasks, error: tasksError } = await withTimeout(supabaseClient.from("day_tasks")
       .select("*")
       .eq("day_id", day.id)
       .order("sort_order", { ascending: true }), "Loading today's tasks");
@@ -224,8 +221,7 @@ async function createActivity(title) {
   const userId = requireUserId();
   const nextOrder = state.activities.length;
 
-  const { data: activity, error } = await withTimeout(supabase
-    .from("activities")
+  const { data: activity, error } = await withTimeout(supabaseClient.from("activities")
     .insert({
       active: true,
       sort_order: nextOrder,
@@ -242,8 +238,7 @@ async function createActivity(title) {
   state.activities.push(activity);
 
   if (state.dayStarted && state.day) {
-    const { data: task, error: taskError } = await withTimeout(supabase
-      .from("day_tasks")
+    const { data: task, error: taskError } = await withTimeout(supabaseClient.from("day_tasks")
       .insert({
         activity_id: activity.id,
         day_id: state.day.id,
@@ -270,8 +265,7 @@ async function startToday() {
   const today = getTallinnDate();
   const now = new Date().toISOString();
 
-  const { data: day, error } = await withTimeout(supabase
-    .from("days")
+  const { data: day, error } = await withTimeout(supabaseClient.from("days")
     .upsert({
       day_date: today,
       ended_at: null,
@@ -305,8 +299,7 @@ async function startToday() {
   let tasks = [];
 
   if (taskRows.length > 0) {
-    const { data, error: tasksError } = await withTimeout(supabase
-      .from("day_tasks")
+    const { data, error: tasksError } = await withTimeout(supabaseClient.from("day_tasks")
       .insert(taskRows)
       .select(), "Creating today's tasks");
 
@@ -333,8 +326,7 @@ async function endToday() {
   }
 
   const endedAt = new Date().toISOString();
-  const { data: day, error } = await withTimeout(supabase
-    .from("days")
+  const { data: day, error } = await withTimeout(supabaseClient.from("days")
     .update({ ended_at: endedAt })
     .eq("id", state.day.id)
     .eq("user_id", userId)
@@ -361,8 +353,7 @@ async function completeCurrentTask() {
   }
 
   const completedAt = new Date().toISOString();
-  const { data, error } = await withTimeout(supabase
-    .from("day_tasks")
+  const { data, error } = await withTimeout(supabaseClient.from("day_tasks")
     .update({ completed_at: completedAt })
     .eq("id", task.id)
     .eq("user_id", userId)
@@ -401,8 +392,7 @@ async function moveTask(id, direction) {
   const activityUpdates = state.dayTasks
     .filter((item) => item.activity_id)
     .map((item, index) => (
-      supabase
-        .from("activities")
+      supabaseClient.from("activities")
         .update({ sort_order: index })
         .eq("id", item.activity_id)
         .eq("user_id", userId)
@@ -437,8 +427,7 @@ async function removeTask(id) {
   }
 
   if (task.activity_id) {
-    const { error: activityError } = await withTimeout(supabase
-      .from("activities")
+    const { error: activityError } = await withTimeout(supabaseClient.from("activities")
       .update({ active: false })
       .eq("id", task.activity_id)
       .eq("user_id", userId), "Deleting activity");
@@ -614,3 +603,4 @@ loadApp().catch((error) => {
   setMessage(`Database sync problem: ${error.message}`);
   render();
 });
+
