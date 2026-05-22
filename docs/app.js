@@ -15,6 +15,7 @@ const retrySyncDay = document.querySelector("#retry-sync-day");
 const syncForm = document.querySelector("#sync-form");
 const syncName = document.querySelector("#sync-name");
 const syncLabel = document.querySelector("#sync-label");
+const syncLabelDay = document.querySelector("#sync-label-day");
 const startView = document.querySelector("#start-view");
 const dayView = document.querySelector("#day-view");
 const todayLabel = document.querySelector("#today-label");
@@ -568,6 +569,8 @@ function render() {
   syncForm.hidden = !session || hasOwner || state.dayStarted;
   syncLabel.hidden = !hasOwner || state.dayStarted;
   syncLabel.textContent = hasOwner ? `Sync name: ${owner.name}` : "";
+  syncLabelDay.hidden = !hasOwner;
+  syncLabelDay.textContent = hasOwner ? `Sync name: ${owner.name}` : "";
   startDay.disabled = !hasDatabase;
   activityForm.querySelector("button").disabled = !hasDatabase;
   done.disabled = !hasDatabase;

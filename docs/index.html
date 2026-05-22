@@ -10,7 +10,7 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-    <link rel="stylesheet" href="./styles.css?v=shared-name-1">
+    <link rel="stylesheet" href="./styles.css?v=shared-name-2">
   </head>
   <body>
     <main class="screen">
@@ -45,6 +45,7 @@
       </section>
 
       <section id="day-view" class="day-view" aria-label="Day activities" hidden>
+        <p id="sync-label-day" class="sync-label"></p>
         <section id="current-card" class="current-card" aria-live="polite" hidden>
           <span id="progress-label" class="progress-label">0 / 0</span>
           <span class="current-label">Current task:</span>
@@ -75,6 +76,6 @@
     </main>
 
     <script src="./supabase.js?v=02fb662"></script>
-    <script src="./app.js?v=shared-name-1"></script>
+    <script src="./app.js?v=shared-name-2"></script>
   </body>
 </html>
