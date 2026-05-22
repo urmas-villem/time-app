@@ -3,7 +3,7 @@ const SUPABASE_KEY = "sb_publishable_CaLa5ZIsn8L8UUhC4bbVMQ_KnzfaXH1";
 const CACHE_KEY = "time-app-cache-v1";
 const TALLINN_TIME_ZONE = "Europe/Tallinn";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const dbWarningStart = document.querySelector("#db-warning-start");
 const dbWarningDay = document.querySelector("#db-warning-day");
@@ -130,7 +130,7 @@ async function loadApp() {
   setMessage("");
 
   const { data: sessionData, error: sessionError } = await withTimeout(
-    supabase.auth.getSession(),
+    supabaseClient.auth.getSession(),
     "Database session"
   );
 
@@ -145,7 +145,7 @@ async function loadApp() {
 
   if (!session) {
     const { data, error } = await withTimeout(
-      supabase.auth.signInAnonymously(),
+      supabaseClient.auth.signInAnonymously(),
       "Anonymous database session"
     );
 
@@ -286,7 +286,7 @@ async function startToday() {
   }
 
   const { error: deleteError } = await withTimeout(
-    supabase.from("day_tasks").delete().eq("day_id", day.id).eq("user_id", userId),
+    supabaseClient.from("day_tasks").delete().eq("day_id", day.id).eq("user_id", userId),
     "Resetting today's tasks"
   );
 
@@ -395,7 +395,7 @@ async function moveTask(id, direction) {
   state.currentIndex = targetIndex;
 
   const taskUpdates = state.dayTasks.map((item) => (
-    supabase.from("day_tasks").update({ sort_order: item.sort_order }).eq("id", item.id)
+    supabaseClient.from("day_tasks").update({ sort_order: item.sort_order }).eq("id", item.id)
   ));
 
   const activityUpdates = state.dayTasks
@@ -428,7 +428,7 @@ async function removeTask(id) {
   }
 
   const { error: deleteTaskError } = await withTimeout(
-    supabase.from("day_tasks").delete().eq("id", id).eq("user_id", userId),
+    supabaseClient.from("day_tasks").delete().eq("id", id).eq("user_id", userId),
     "Deleting task"
   );
 
@@ -595,7 +595,7 @@ activityForm.addEventListener("submit", (event) => {
   });
 });
 
-supabase.auth.onAuthStateChange((_event, nextSession) => {
+supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
   session = nextSession;
 });
 
