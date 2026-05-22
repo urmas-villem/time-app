@@ -5,6 +5,10 @@ const startView = document.querySelector("#start-view");
 const dayView = document.querySelector("#day-view");
 const todayLabel = document.querySelector("#today-label");
 const currentCard = document.querySelector("#current-card");
+const summary = document.querySelector("#summary");
+const summaryStats = document.querySelector("#summary-stats");
+const summaryDone = document.querySelector("#summary-done");
+const summaryIncomplete = document.querySelector("#summary-incomplete");
 const startDay = document.querySelector("#start-day");
 const endDay = document.querySelector("#end-day");
 const progressLabel = document.querySelector("#progress-label");
@@ -13,7 +17,6 @@ const done = document.querySelector("#done");
 const activityForm = document.querySelector("#activity-form");
 const activityInput = document.querySelector("#activity-input");
 const activityWheel = document.querySelector("#activity-wheel");
-const activityCount = document.querySelector("#activity-count");
 
 let state = normalizeState(loadState());
 
@@ -43,7 +46,8 @@ function createEmptyState() {
     date: getTallinnDate(),
     dayStarted: false,
     currentIndex: 0,
-    activities: []
+    activities: [],
+    history: []
   };
 }
 
@@ -67,22 +71,29 @@ function normalizeState(candidate) {
     ? candidate.activities.map((activity) => ({
         id: activity.id || crypto.randomUUID(),
         title: String(activity.title || "").trim(),
-        done: Boolean(activity.done)
+        done: Boolean(activity.done),
+        completedAt: activity.completedAt || null
       })).filter((activity) => activity.title)
     : [];
 
+  const history = Array.isArray(candidate.history) ? candidate.history : [];
   const normalized = {
     date: candidate.date || today,
     dayStarted: Boolean(candidate.dayStarted),
     currentIndex: Number.isInteger(candidate.currentIndex) ? candidate.currentIndex : 0,
-    activities
+    activities,
+    history
   };
 
   if (normalized.date !== today) {
     normalized.date = today;
     normalized.dayStarted = false;
     normalized.currentIndex = 0;
-    normalized.activities = normalized.activities.map((activity) => ({ ...activity, done: false }));
+    normalized.activities = normalized.activities.map((activity) => ({
+      ...activity,
+      completedAt: null,
+      done: false
+    }));
   }
 
   normalized.currentIndex = clampIndex(normalized.currentIndex, normalized.activities);
@@ -103,6 +114,45 @@ function clampIndex(index, activities) {
 
 function getCurrentActivity() {
   return state.activities[state.currentIndex];
+}
+
+function getTallinnTime(isoTime) {
+  if (!isoTime) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: TALLINN_TIME_ZONE
+  }).format(new Date(isoTime));
+}
+
+function createDaySummary() {
+  const summaryTasks = state.activities.map((activity, index) => ({
+    index: index + 1,
+    title: activity.title,
+    done: Boolean(activity.done),
+    completedAt: activity.completedAt || null
+  }));
+
+  return {
+    date: state.date,
+    endedAt: new Date().toISOString(),
+    tasks: summaryTasks
+  };
+}
+
+function saveDaySummary() {
+  const daySummary = createDaySummary();
+  state.history = [
+    ...state.history.filter((entry) => entry.date !== daySummary.date),
+    daySummary
+  ];
+}
+
+function getTodaySummary() {
+  return state.history.find((entry) => entry.date === getTallinnDate()) || null;
 }
 
 function moveActivity(id, direction) {
@@ -143,14 +193,15 @@ function removeActivity(id) {
 
 function render() {
   const readableDate = getReadableTallinnDate();
+  const todaySummary = getTodaySummary();
   todayLabel.textContent = readableDate;
   startView.hidden = state.dayStarted;
   dayView.hidden = !state.dayStarted;
+  renderSummary(todaySummary);
 
   const current = getCurrentActivity();
   const completed = state.activities.filter((activity) => activity.done).length;
-  progressLabel.textContent = `${completed} / ${state.activities.length}`;
-  activityCount.textContent = `${state.activities.length} ${state.activities.length === 1 ? "activity" : "activities"}`;
+  progressLabel.textContent = `Completed tasks today: ${completed} of ${state.activities.length}`;
 
   currentCard.hidden = !current;
   currentActivity.textContent = current ? (current.done ? "Day complete" : current.title) : "";
@@ -208,19 +259,55 @@ function render() {
   });
 }
 
+function renderSummary(daySummary) {
+  summary.hidden = state.dayStarted || !daySummary;
+  summaryDone.innerHTML = "";
+  summaryIncomplete.innerHTML = "";
+
+  if (!daySummary) {
+    summaryStats.textContent = "";
+    return;
+  }
+
+  const completed = daySummary.tasks.filter((task) => task.done);
+  const incomplete = daySummary.tasks.filter((task) => !task.done);
+  summaryStats.textContent = `${completed.length} completed, ${incomplete.length} incomplete. Ended at ${getTallinnTime(daySummary.endedAt)}.`;
+
+  for (const task of completed) {
+    const item = document.createElement("li");
+    item.textContent = `${task.title} - ${getTallinnTime(task.completedAt)}`;
+    summaryDone.append(item);
+  }
+
+  for (const task of incomplete) {
+    const item = document.createElement("li");
+    item.textContent = task.title;
+    summaryIncomplete.append(item);
+  }
+}
+
 startDay.addEventListener("click", () => {
   state.date = getTallinnDate();
   state.dayStarted = true;
   state.currentIndex = 0;
-  state.activities = state.activities.map((activity) => ({ ...activity, done: false }));
+  state.activities = state.activities.map((activity) => ({
+    ...activity,
+    completedAt: null,
+    done: false
+  }));
   saveState();
   render();
 });
 
 endDay.addEventListener("click", () => {
+  saveDaySummary();
   state.dayStarted = false;
   state.currentIndex = 0;
-  state.activities = state.activities.map((activity) => ({ ...activity, done: false }));
+  state.activities = state.activities.map((activity) => ({
+    ...activity,
+    completedAt: null,
+    done: false
+  }));
   saveState();
   render();
 });
@@ -233,6 +320,7 @@ done.addEventListener("click", () => {
   }
 
   current.done = true;
+  current.completedAt = new Date().toISOString();
   const nextIndex = state.activities.findIndex((activity, index) => index > state.currentIndex && !activity.done);
   state.currentIndex = nextIndex === -1 ? state.activities.length - 1 : nextIndex;
   saveState();
@@ -251,6 +339,7 @@ activityForm.addEventListener("submit", (event) => {
   state.activities.push({
     id: crypto.randomUUID(),
     title,
+    completedAt: null,
     done: false
   });
 

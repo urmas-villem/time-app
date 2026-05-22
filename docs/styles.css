@@ -78,6 +78,39 @@ input:focus-visible {
   padding: 28px;
 }
 
+.summary {
+  display: grid;
+  gap: 14px;
+  padding-top: 6px;
+}
+
+.summary h2,
+.summary h3,
+.summary p {
+  margin: 0;
+}
+
+.summary h2 {
+  font-size: 1.35rem;
+}
+
+.summary h3 {
+  color: #0f766e;
+  font-size: 0.82rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.summary p,
+.summary li {
+  color: #41534f;
+}
+
+.summary ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: #0f766e;
@@ -126,24 +159,22 @@ h2 {
   gap: 14px;
 }
 
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
 .current-card {
   display: grid;
-  gap: 18px;
+  gap: 12px;
   padding: 22px;
 }
 
 .progress-label,
-#activity-count {
+.current-label {
   color: #60736f;
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+.current-label {
+  color: #0f766e;
+  text-transform: uppercase;
 }
 
 #current-activity {
@@ -186,7 +217,7 @@ input {
 .activity-wheel {
   position: relative;
   max-height: 292px;
-  margin: 14px 0 0;
+  margin: 0;
   padding: 72px 0;
   display: grid;
   gap: 10px;
@@ -319,8 +350,18 @@ input {
   }
 
   .progress-label,
-  #activity-count,
+  .current-label,
   label {
+    color: #b6c8c3;
+  }
+
+  .summary h3,
+  .current-label {
+    color: #5eead4;
+  }
+
+  .summary p,
+  .summary li {
     color: #b6c8c3;
   }
 

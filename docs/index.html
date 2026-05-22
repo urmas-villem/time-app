@@ -18,11 +18,24 @@
         <p class="eyebrow" id="today-label">Tallinn day</p>
         <h1 id="app-title">Time App</h1>
         <button id="start-day" type="button" class="primary big">Start Day</button>
+        <section id="summary" class="summary" aria-labelledby="summary-title" hidden>
+          <h2 id="summary-title">End day summary</h2>
+          <p id="summary-stats"></p>
+          <div class="summary-block">
+            <h3>Completed</h3>
+            <ul id="summary-done"></ul>
+          </div>
+          <div class="summary-block">
+            <h3>Incomplete</h3>
+            <ul id="summary-incomplete"></ul>
+          </div>
+        </section>
       </section>
 
-      <section id="day-view" class="day-view" aria-labelledby="wheel-label" hidden>
+      <section id="day-view" class="day-view" aria-label="Day activities" hidden>
         <section id="current-card" class="current-card" aria-live="polite" hidden>
           <span id="progress-label" class="progress-label">0 / 0</span>
+          <span class="current-label">Current task:</span>
           <h2 id="current-activity"></h2>
           <button id="done" type="button" class="primary">Done</button>
         </section>
@@ -35,11 +48,7 @@
           </div>
         </form>
 
-        <section class="wheel-section" aria-labelledby="wheel-label">
-          <div class="section-head">
-            <h2 id="wheel-label">Order</h2>
-            <span id="activity-count">0 activities</span>
-          </div>
+        <section class="wheel-section" aria-label="Activity order">
           <ol id="activity-wheel" class="activity-wheel" aria-label="Activity order"></ol>
         </section>
 
